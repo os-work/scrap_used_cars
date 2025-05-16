@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  scraper:
+    build: .
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python wait_for_postgres.py && python db.py && python scraper.py"
+
+volumes:
+  pgdata:
