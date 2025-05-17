@@ -45,8 +45,8 @@ async def fetch_and_store_car(session: ClientSession, db_pool, url: str):
             logging.error(f"Error storing car from {url}: {e}")
 
 
-async def main():
-    await asyncio.sleep(5)  # ensure PostgreSQL is ready
+async def scrap():
+    await asyncio.sleep(3)  # ensure PostgreSQL is ready
     db_pool = await asyncpg.create_pool(**DB_SETTINGS)
 
     async with aiohttp.ClientSession() as session:
@@ -61,11 +61,12 @@ async def main():
         logging.info(f"Total car URLs collected: {len(all_car_urls)}")
 
         tasks = [fetch_and_store_car(session, db_pool, url) for url in all_car_urls]
-        logging.info(f"Total tasks created: {len(tasks)}")
         await asyncio.gather(*tasks)
     logging.info(f"Database bulk finished")
 
-
-if __name__ == '__main__':
+def run_scraper():
     logging.info("Starting scraper...")
-    asyncio.run(main())
+    asyncio.run(scrap())
+
+#if __name__ == '__main__':
+#    asyncio.run(scrap())

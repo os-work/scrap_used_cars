@@ -22,7 +22,7 @@ services:
     volumes:
       - ./app:/app
     command: >
-      sh -c "python wait_for_postgres.py && python db.py && python scraper.py"
+      sh -c "python wait_for_postgres.py && python db.py && python scheduler.py"
 
 volumes:
   pgdata:
