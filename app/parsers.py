@@ -1,4 +1,5 @@
-﻿import aiohttp
+﻿from operator import contains
+import aiohttp
 import os
 import re
 
@@ -11,14 +12,14 @@ load_dotenv()
 HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
+URL = os.getenv('AUTO_RIA_URL', 'https://auto.ria.com/uk/car/used/')
 
 # Amount cars displayed on one page, defaulting to 20
 TOTAL_ITEMS_PER_PAGE = int(os.getenv('ITEMS_PER_PAGE', 20))
 
 async def extract_total_pages_number(session: aiohttp.ClientSession) -> int:
-    url = f"https://auto.ria.com/uk/car/used/?countpage={TOTAL_ITEMS_PER_PAGE}"
     try:
-        async with session.get(url, headers=HEADERS) as resp:
+        async with session.get(URL, headers=HEADERS) as resp:
             html = await resp.text()
             soup = BeautifulSoup(html, 'html.parser')
             span = soup.select_one('span.page-item.dhide.text-c')
@@ -36,20 +37,19 @@ async def extract_total_pages_number(session: aiohttp.ClientSession) -> int:
         return None
 
 
-async def extract_car_links(session: aiohttp.ClientSession, page_number: int) -> list[str]:
-    url = f"https://auto.ria.com/uk/car/used/?page={page_number}&countpage={TOTAL_ITEMS_PER_PAGE}"
-    try:
-        async with session.get(url, headers=HEADERS) as resp:
-            html = await resp.text()
-            soup = BeautifulSoup(html, 'html.parser')
-            links = soup.select('a.address')
-            return [link['href'] for link in links if link.get('href')]
-    except Exception:
+async def extract_car_links(session: aiohttp.ClientSession, page_number: int) -> list[str]:  
+    try:  
+        async with session.get(URL, headers=HEADERS, params={'page': page_number}) as resp:  
+            html = await resp.text()  
+            soup = BeautifulSoup(html, 'html.parser')  
+            links = soup.select('a.address')  
+            return filter_valid_links(links)  
+    except Exception:  
         return []
 
 async def fetch_car_detail(session: aiohttp.ClientSession, url: str) -> tuple | None:
     try:
-        async with session.get(url, headers=HEADERS) as resp:
+        async with session.get(url, headers=HEADERS) as resp:         
             html = await resp.text()
             soup = BeautifulSoup(html, 'html.parser')
 
@@ -59,9 +59,18 @@ async def fetch_car_detail(session: aiohttp.ClientSession, url: str) -> tuple | 
             odometer_tag = soup.find('span', string=lambda s: s and 'тис. км' in s)
             odometer = parse_odometer(odometer_tag.text) if odometer_tag else 0
 
-            username = soup.select_one('.seller_info_area .seller_info_name').text.strip()
-            #TODO phone number scraping
-            phone_number = 0 #hardcoded for now bcs it require Selenium or JS stuff, too less time to impl..
+            username_tag = soup.select_one('.seller_info_area .seller_info_name')
+            if username_tag:
+                username = username_tag.text.strip()
+            else:
+                username = "Sold" # In case username is empty car is already sold 
+
+            #TBD phone number scraping with Selenium or find out API way
+            phone_data = soup.select_one('[data-phone-number]')
+            if phone_data:
+                phone_number = parse_content(phone_data)
+            else:
+                phone_number = 'None'
 
             image_url = soup.select_one('.photo-620x465 img')
             image_url = image_url['src'] if image_url else ''
@@ -71,7 +80,7 @@ async def fetch_car_detail(session: aiohttp.ClientSession, url: str) -> tuple | 
 
             car_num_element = soup.select_one('.state-num')
             if car_num_element:
-                car_num = car_num_element.text.strip()
+                car_num = parse_content(car_num_element)
             else:
                 car_num = 'None'
 
@@ -92,9 +101,31 @@ async def fetch_car_detail(session: aiohttp.ClientSession, url: str) -> tuple | 
         raise ValueError(f"Error parsing car page {url}: {e}")
 
 
+def filter_valid_links(links: list) -> list[str]:  
+    """  
+    Filters valid car links, excluding those containing 'newauto' as the scope is used cars
+    """  
+    return [link['href'] for link in links if link.get('href') and 'newauto' not in link['href']]  
+
 def parse_price(price_text: str) -> int:
     digits = re.sub(r'[^\d]', '', price_text)
     return int(digits) if digits else 0
 
-def parse_odometer(odometer_text: str) -> int:
-    digits = re.sub(r'[^\d]', '', odometer_text)
+def parse_odometer(raw_text: str) -> int:
+    """
+    Parses odometer text like '208 тис. км' into integer kilometers.
+    """
+    if not raw_text:
+        return 0
+    raw_text = raw_text.lower()
+    # Match patterns like "208 тис. км" or "100 км"
+    match = re.search(r'([\d\s]+)(?:\s*тис)?', raw_text)
+    if match:
+        number = int(match.group(1).replace(' ', ''))
+        return number * 1000 if 'тис' in raw_text else number
+    return 0
+
+def parse_content(raw_text: str) -> str:
+    if raw_text and raw_text.contents:
+        return raw_text.contents[0].text.strip()
+    return 'None'

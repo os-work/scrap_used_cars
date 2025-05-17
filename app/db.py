@@ -23,7 +23,7 @@ async def create_database_table():
         price_usd INTEGER,
         odometer INTEGER,
         username VARCHAR,
-        phone_number BIGINT,
+        phone_number VARCHAR,
         image_url VARCHAR,
         images_count INTEGER,
         car_number VARCHAR,
