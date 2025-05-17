@@ -2,11 +2,10 @@ import asyncpg
 import logging
 import os
 from dotenv import load_dotenv
+from config_logger import setup_logging
 
+setup_logging()
 load_dotenv()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 async def create_database_table():
     conn = await asyncpg.connect(

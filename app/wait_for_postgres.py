@@ -3,10 +3,10 @@ import asyncpg
 import os
 import logging
 from dotenv import load_dotenv
+from config_logger import setup_logging
 
+setup_logging()
 load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Waits until postgress connection is ready and retries every 2 seconds if not
 async def wait_for_db():

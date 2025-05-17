@@ -5,10 +5,10 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from datetime import datetime
 from scraper import run_scraper
 from dotenv import load_dotenv
+from config_logger import setup_logging
 
+setup_logging()
 load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_db_dump():
     dump_dir = os.path.join(os.getcwd(), "dumps")

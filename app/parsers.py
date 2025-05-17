@@ -1,5 +1,4 @@
-﻿from operator import contains
-import aiohttp
+﻿import aiohttp
 import os
 import re
 

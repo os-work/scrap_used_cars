@@ -7,10 +7,10 @@ from aiohttp import ClientSession
 from parsers import extract_car_links, fetch_car_detail, extract_total_pages_number
 from dotenv import load_dotenv
 from math import ceil
+from config_logger import setup_logging
 
+setup_logging()
 load_dotenv()
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 DB_SETTINGS = {
     'user': os.getenv('DB_USER'),
